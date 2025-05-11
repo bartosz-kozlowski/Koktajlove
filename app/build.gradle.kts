@@ -54,7 +54,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.firebase.auth.ktx)
+    //implementation(libs.firebase.auth.ktx)
     implementation(libs.androidx.tv.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -74,8 +74,14 @@ dependencies {
     implementation("com.google.accompanist:accompanist-pager-indicators:0.31.5-beta")
     implementation("com.google.accompanist:accompanist-placeholder-material:0.30.1")
     implementation("androidx.compose.foundation:foundation:1.3.0")
-    implementation("com.google.firebase:firebase-firestore-ktx:25.1.4")
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")  // Do logowania zapytań
+    //implementation("com.google.firebase:firebase-firestore-ktx:25.1.4")
+    //implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
 
 }
 

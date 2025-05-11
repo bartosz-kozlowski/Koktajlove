@@ -4,12 +4,18 @@ import CocktailViewModel
 import androidx.compose.ui.Alignment
 import android.content.Intent
 import android.content.res.Configuration
-import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,7 +23,6 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,19 +44,36 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.lerp
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
-import androidx.tv.material3.TabDefaults
+import androidx.compose.ui.text.style.TextAlign
+import androidx.core.net.toUri
+import com.example.cocktailapp.ui.theme.AlcoholicColor
+import com.example.cocktailapp.ui.theme.NonAlcoholicColor
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             CocktailAppTheme {
+                val context = LocalContext.current
+                val connectivityObserver = remember { ConnectivityObserver(context) }
+                val isConnected by connectivityObserver.connectionStatus.collectAsState(initial = true)
+
+                LaunchedEffect(isConnected) {
+                    if (!isConnected) {
+                        Toast.makeText(context, "Brak połączenia z internetem", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
                 AnonymousLogin()
                 val viewModel: CocktailViewModel = viewModel()
                 CocktailAppRoot(viewModel = viewModel)
@@ -60,6 +82,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.DONUT)
 @Composable
 fun isTablet(): Boolean {
     val context = LocalContext.current
@@ -74,12 +97,16 @@ fun AnonymousLogin() {
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) {
             auth.signInAnonymously()
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        //Toast.makeText(context, "Zalogowano", Toast.LENGTH_SHORT).show()
-                    } else {
-                        //Toast.makeText(context, "Błąd logowania: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
-                    }
+                .addOnSuccessListener {
+                    //Toast.makeText(context, "Zalogowano anonimowo", Toast.LENGTH_SHORT).show()
+                }
+                .addOnFailureListener { exception ->
+                    //Log.e("FirebaseAuth", "Błąd logowania anonimowego", exception)
+                   // Toast.makeText(
+                    //    context,
+                   //     " Błąd logowania: ${exception.message}",
+                   //     Toast.LENGTH_LONG
+                   // ).show()
                 }
         }
     }
@@ -125,12 +152,12 @@ fun CocktailTabbedScreen(
         initialPage = selectedTabIndex,
         pageCount = { 4 }
     )
-
+    var showSearch by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val selectedCocktail by viewModel.selectedCocktail.collectAsState()
-    val tabs = listOf("Wszystkie", "Alkoholowe", "Bezalkoholowe", "Ulubione")
+    val tabs = listOf("Wszystkie", "Z Procentem", "Na Trzeźwo", "Ulubione")
 
     LaunchedEffect(pagerState, isTablet) {
         //if (!isTablet) {
@@ -164,6 +191,39 @@ fun CocktailTabbedScreen(
                         }
                     )
                 }
+                val context = LocalContext.current
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                NavigationDrawerItem(
+                    label = { Text("Barman AI") },
+                    selected = false,
+                    onClick = {
+                        scope.launch {
+                            focusManager.clearFocus()
+                            viewModel.selectedCocktail.value?.let { cocktail ->
+                                timerViewModel.pauseTimer(cocktail.id)
+                            }
+                            drawerState.close()
+                        }
+                        val intent = Intent(context, AiCocktailActivity::class.java)
+                        context.startActivity(intent)
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                val scope = rememberCoroutineScope()
+                NavigationDrawerItem(
+                    label = { Text("O aplikacji") },
+                    selected = false,
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            Toast.makeText(
+                                context,
+                                "Twórca: Bartosz Kozłowski\nKoktajlove © 2025",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                )
             }
         }
     ) {
@@ -181,9 +241,10 @@ fun CocktailTabbedScreen(
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
                 topBar = {
+                    val context = LocalContext.current
                     Column {
                         TopAppBar(
-                            title = { Text("Koktajlove 🍹") },
+                            title = { Text("Koktajlove🍹") },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -192,17 +253,46 @@ fun CocktailTabbedScreen(
                                 IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                     Icon(Icons.Default.Menu, contentDescription = "Menu")
                                 }
+                            },
+                            actions = {
+                                IconButton(onClick = { showSearch = !showSearch }) {
+                                    Icon(Icons.Default.Search, contentDescription = "Szukaj")
+                                }
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        focusManager.clearFocus()
+                                        viewModel.selectedCocktail.value?.let { cocktail ->
+                                            timerViewModel.pauseTimer(cocktail.id)
+                                        }
+                                        drawerState.close()
+                                    }
+                                    val intent = Intent(context, AiCocktailActivity::class.java)
+                                    context.startActivity(intent)
+                                }) {
+                                    Icon(Icons.Default.SmartToy, contentDescription = "Konsultuj się z barmanem AI")
+                                    /*Icon(
+                                        painter = painterResource(id = R.drawable.barman_ai),
+                                        contentDescription = "Barman AI",
+                                        modifier = Modifier.size(24.dp)
+                                    )*/
+                                }
                             }
                         )
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            placeholder = { Text("Szukaj po nazwie lub opisie") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            singleLine = true
-                        )
+                            AnimatedVisibility(
+                                visible = showSearch,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    placeholder = { Text("Szukaj po nazwie lub opisie") },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    singleLine = true
+                                )
+                            }
                     }
                 },
                 floatingActionButton = {
@@ -211,14 +301,14 @@ fun CocktailTabbedScreen(
                         FloatingActionButton(
                             onClick = {
                                 val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                    data = Uri.parse("smsto:")
+                                    data = "smsto:".toUri()
                                     putExtra("sms_body", "Składniki: ${selectedCocktail!!.ingredients}")
                                 }
                                 context.startActivity(intent)
                             },
                             containerColor = MaterialTheme.colorScheme.primary
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = "Wyślij SMS")
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Wyślij SMS")
                         }
                     }
                 }
@@ -288,6 +378,8 @@ fun CocktailTabbedScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     items(cocktails) { cocktail ->
+                                        val favorites by viewModel.favorites.collectAsState()
+                                        val isFavorite = favorites.contains(cocktail.id)
                                         Card(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -307,11 +399,39 @@ fun CocktailTabbedScreen(
                                                         .fillMaxWidth()
                                                         .height(150.dp)
                                                 )
-                                                Text(
-                                                    text = cocktail.name,
-                                                    modifier = Modifier.padding(12.dp),
-                                                    style = MaterialTheme.typography.titleMedium
-                                                )
+
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = cocktail.name,
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    IconButton(
+                                                        onClick = {
+                                                            viewModel.toggleFavorite(cocktail.copy(isFavorite = !isFavorite))
+                                                        }
+                                                    ) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Favorite,
+                                                                contentDescription = "Ulubione",
+                                                                tint = if (isFavorite) Color.Red else Color.Gray
+                                                            )
+                                                            Spacer(modifier = Modifier.width(4.dp))
+                                                            Text(
+                                                                text = "${cocktail.likeCount}",
+                                                                color = Color.White,
+                                                                style = MaterialTheme.typography.bodyMedium
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -402,7 +522,10 @@ fun CocktailTabbedScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+
                                 items(cocktails) { cocktail ->
+                                    val favorites by viewModel.favorites.collectAsState()
+                                    val isFavorite = favorites.contains(cocktail.id)
                                     Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -425,11 +548,42 @@ fun CocktailTabbedScreen(
                                                     .fillMaxWidth()
                                                     .height(160.dp)
                                             )
-                                            Text(
-                                                text = cocktail.name,
-                                                modifier = Modifier.padding(16.dp),
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = cocktail.name,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                IconButton(
+                                                    onClick = {
+                                                        viewModel.toggleFavorite(
+                                                            cocktail.copy(isFavorite = !isFavorite)
+                                                        )
+                                                    }
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Favorite,
+                                                            contentDescription = "Ulubione",
+                                                            tint = if (isFavorite) Color.Red else Color.Gray
+                                                        )
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(
+                                                            text = "${cocktail.likeCount}",
+                                                            color = Color.White,
+                                                            style = MaterialTheme.typography.bodyMedium
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -442,7 +596,6 @@ fun CocktailTabbedScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TabletCocktailDetailScreen(
     cocktail: Cocktail,
@@ -463,9 +616,15 @@ fun TabletCocktailDetailScreen(
         previousDrinkId = cocktail.id
     }
 
+    //val scrollState = rememberScrollState()
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(cocktail.id) {
+        scrollState.scrollTo(0)
+    }
+
     val expandedHeight = 240.dp
-    val collapsedHeight = 56.dp
+    val collapsedHeight = 106.dp
     val density = LocalContext.current.resources.displayMetrics.density
     val collapseRangePx = expandedHeight.toPx(density) - collapsedHeight.toPx(density)
     val scrollOffset = scrollState.value.toFloat().coerceAtMost(collapseRangePx)
@@ -494,7 +653,7 @@ fun TabletCocktailDetailScreen(
                         .padding(16.dp),
                     shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
-                        containerColor = if (cocktail.isAlcoholic) Color(0xFFFF7043) else Color(0xFF81C784) // Pomarańczowy dla alkoholowego, zielony dla bezalkoholowego
+                        containerColor = if (cocktail.isAlcoholic) AlcoholicColor else NonAlcoholicColor // Pomarańczowy dla alkoholowego, zielony dla bezalkoholowego
                     ),
                     elevation = CardDefaults.cardElevation(4.dp) // Cień dla głębi
                 ) {
@@ -521,7 +680,7 @@ fun TabletCocktailDetailScreen(
                         .padding(16.dp),
                     shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -541,7 +700,7 @@ fun TabletCocktailDetailScreen(
                         .padding(16.dp),
                     shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -558,7 +717,7 @@ fun TabletCocktailDetailScreen(
                         .padding(16.dp),
                     shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -575,7 +734,7 @@ fun TabletCocktailDetailScreen(
                         .padding(16.dp),
                     shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
                     Column(

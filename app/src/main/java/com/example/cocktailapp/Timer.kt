@@ -1,6 +1,8 @@
 package com.example.cocktailapp
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -45,12 +47,20 @@ fun TimerScreen(
     val isRunning = timerViewModel.isRunning(drinkId)
     val selectedDuration = timerViewModel.selectedDuration(drinkId)
 
-    val minutes = (timeLeft / 1000 / 60).toInt()
-    val seconds = (timeLeft / 1000 % 60).toInt()
+    val seconds = ((timeLeft + 500) / 1000 % 60).toInt()
+    val minutes = ((timeLeft + 500) / 1000 / 60).toInt()
+
     val totalDuration = selectedDuration
 
-    val progress = if (totalDuration != 0L) timeLeft.toFloat() / totalDuration else 1f
-    val animatedProgress by animateFloatAsState(targetValue = progress, label = "")
+    val rawProgress = if (totalDuration > 0) timeLeft.toFloat() / totalDuration else 1f
+    val progress = if (timeLeft <= 0L) 0f else rawProgress.coerceIn(0f, 1f)
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = keyframes {
+            durationMillis = 100
+        },
+        label = ""
+    )
 
     Column(
         modifier = modifier
@@ -202,7 +212,7 @@ fun iOSPicker(
                 .height(itemHeight * 3)
                 .width(80.dp)
                 .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.surface,
                     shape = MaterialTheme.shapes.medium
                 )
         ) {

@@ -45,7 +45,22 @@ class CocktailViewModel : ViewModel() {
             }
     }
 
-
+    private fun refreshCocktail(id: String) {
+        db.collection("cocktails").document(id)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    val updated = document.toObject(Cocktail::class.java)?.copy(id = id)
+                    updated?.let {
+                        // zamiana w liście
+                        _cocktails.value = _cocktails.value.map { old ->
+                            if (old.id == id) it else old
+                        }
+                        _selectedCocktail.value = it
+                    }
+                }
+            }
+    }
     fun loadCocktail(id: String) {
         db.collection("cocktails").document(id)
             .get()
@@ -73,7 +88,7 @@ class CocktailViewModel : ViewModel() {
                 }
             }
     }
-
+    /*
     fun toggleFavorite(cocktail: Cocktail) {
         val userId = auth.currentUser?.uid ?: return
         val favRef = db.collection("users").document(userId).collection("favorites").document(cocktail.id)
@@ -83,6 +98,30 @@ class CocktailViewModel : ViewModel() {
         } else {
             favRef.set(hashMapOf("timestamp" to System.currentTimeMillis()))
         }
+    }*/
+    fun toggleFavorite(cocktail: Cocktail) {
+        val userId = auth.currentUser?.uid ?: return
+        val favRef = db.collection("users").document(userId)
+            .collection("favorites").document(cocktail.id)
+        val cocktailRef = db.collection("cocktails").document(cocktail.id)
+
+        if (_favorites.value.contains(cocktail.id)) {
+            favRef.delete()
+            cocktailRef.update("likeCount", com.google.firebase.firestore.FieldValue.increment(-1))
+                .addOnSuccessListener {
+                    refreshCocktail(cocktail.id)
+                }
+        } else {
+            favRef.set(hashMapOf("timestamp" to System.currentTimeMillis()))
+            cocktailRef.update("likeCount", com.google.firebase.firestore.FieldValue.increment(1))
+                .addOnSuccessListener {
+                    refreshCocktail(cocktail.id)
+                }
+        }
+    }
+
+    fun clearSelectedCocktail() {
+        _selectedCocktail.value = null
     }
 
     fun isFavorite(cocktail: Cocktail): Boolean {

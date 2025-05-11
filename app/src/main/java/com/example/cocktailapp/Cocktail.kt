@@ -17,5 +17,6 @@ data class Cocktail(
     var isFavorite: Boolean = false,
     @get:PropertyName("preparationTime")
     @set:PropertyName("preparationTime")
-    var preparationTime: Int = 0
+    var preparationTime: Int = 0,
+    val likeCount: Int = 0
 )

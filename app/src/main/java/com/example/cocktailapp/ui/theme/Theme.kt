@@ -11,12 +11,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.example.cocktailapp.ui.theme.*
 
+/*
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
     tertiary = Pink80
 )
+*/
 /*
 private val LightColorScheme = lightColorScheme(
     primary = Purple40,
@@ -37,17 +40,44 @@ private val LightColorScheme = lightColorScheme(
     */
 )
  */
+/*
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFFFF9800), // intensywny pomarańcz (apka typu "słońce, energia, koktajle")
+    primary = Color(0xFFFF9800),
     onPrimary = Color.White,
-    secondary = Color(0xFFFFC107), // żółty słoneczny akcent
+    //secondary = Color(0xFFFFC107),
     onSecondary = Color.Black,
-    background = Color(0xFFFFF4DF), // bardzo jasne kremowe tło
-    surface = Color(0xFFFFFFFF),    // białe karty
-    onBackground = Color(0xFF1C1B1F),    // ciemnoszary tekst na tle
-    onSurface = Color(0xFF1C1B1F),       // ciemnoszary tekst na kartach
-    surfaceVariant = Color(0xFFFFCD90 ),  // np. separator w nawigacji, outline
-    outline = Color(0xFF7B7B7B)          // jasnoszary outline dla dividerów
+    background = Color(0xFFFFF4DF),
+    surface = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF1C1B1F),
+    onSurface = Color(0xFF1C1B1F),
+    surfaceVariant = Color(0xFFFFCD90 ),
+    outline = Color(0xFF7B7B7B)
+)
+ */
+
+private val LightColorScheme = lightColorScheme(
+    primary = OrangePrimary, //glowny kolor aplikacji
+    onPrimary = Color.White, //kolor na primary
+    secondary = OrangeSec,
+    onSecondary = Color.Black,
+    background = LightBackground, //tło aplikacji
+    onBackground = DarkText, // na tle aplikacji
+    surface = LightSurface, //kolor tła kart
+    onSurface = DarkText, //kolor na kartach
+    //surfaceVariant = Color(0xFFFFCD90),
+    outline = OutlineGray //granice/obramowania
+)
+private val DarkColorScheme = darkColorScheme(
+    primary = DarkPrimaryOrange,
+    onPrimary = Color.White,
+    secondary = Mustard,
+    //onSecondary = Color.Black,
+    background = DarkBackground, // tło aplikacji
+    onBackground = LightTextOnDark,    //na tle
+    surface = DarkSurface, // kolor tła kart (szczegoly)
+    onSurface = LightTextOnSurface, //kolor na kartach (szczegoly)
+    //surfaceVariant = Color(0xFF5C4033),
+    outline = OutlineBeige //granice
 )
 
 

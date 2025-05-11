@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "595178008073",
+    "project_id": "koktajlove-516f1",
+    "storage_bucket": "koktajlove-516f1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:595178008073:android:937f6e9bdcd34b1e7e92d8",
+        "android_client_info": {
+          "package_name": "com.example.cocktailapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-5lcx5kcZ6QPNaLBju6C_bKn1RUXcs2M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

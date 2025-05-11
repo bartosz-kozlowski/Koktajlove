@@ -3,7 +3,6 @@ package com.example.cocktailapp
 import CocktailViewModel
 import android.content.Intent
 import android.content.res.Resources
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -16,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,15 +23,23 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.cocktailapp.ui.theme.CocktailAppTheme
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.ui.input.pointer.pointerInput
+import com.example.cocktailapp.ui.theme.AlcoholicColor
+import com.example.cocktailapp.ui.theme.NonAlcoholicColor
+import androidx.core.net.toUri
+
 fun Dp.toPx(density: Float): Float = this.value * density
 fun androidx.compose.ui.unit.Dp.toPx(): Float = this.value * Resources.getSystem().displayMetrics.density
+
+
 
 class CocktailDetailActivity : ComponentActivity() {
 
@@ -51,7 +57,7 @@ class CocktailDetailActivity : ComponentActivity() {
             CocktailAppTheme {
                 val scrollState = rememberScrollState()
                 val expandedHeight = 240.dp
-                val collapsedHeight = 76.dp
+                val collapsedHeight = 86.dp
                 val collapseRangePx = expandedHeight.toPx() - collapsedHeight.toPx()
                 val scrollOffset = scrollState.value.toFloat().coerceAtMost(collapseRangePx)
                 val collapseFraction = scrollOffset / collapseRangePx
@@ -83,19 +89,30 @@ class CocktailDetailActivity : ComponentActivity() {
                             FloatingActionButton(
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                        data = Uri.parse("smsto:")
+                                        data = "smsto:".toUri()
                                         putExtra("sms_body", "Składniki: ${currentCocktail.ingredients}")
                                     }
                                     context.startActivity(intent)
                                 },
                                 containerColor = MaterialTheme.colorScheme.primary
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = "Wyślij SMS")
+                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Wyślij SMS")
                             }
                         }
                     ) { innerPadding ->
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Column(
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectHorizontalDragGestures { change, dragAmount ->
+                                        if (dragAmount > 40) { // przesunięcie w prawo
+                                            finish()
+                                        }
+                                    }
+                                }
+                        ) {
+
+                        Column(
                                 modifier = Modifier
                                     .padding(innerPadding)
                                     .verticalScroll(scrollState)
@@ -110,7 +127,7 @@ class CocktailDetailActivity : ComponentActivity() {
                                             .padding(16.dp),
                                         shape = MaterialTheme.shapes.medium,
                                         colors = CardDefaults.cardColors(
-                                            containerColor = if (currentCocktail.isAlcoholic) Color(0xFFFF7043) else Color(0xFF81C784)
+                                            containerColor = if (currentCocktail.isAlcoholic) AlcoholicColor else NonAlcoholicColor
                                         ),
                                         elevation = CardDefaults.cardElevation(4.dp)
                                     ) {
@@ -140,7 +157,7 @@ class CocktailDetailActivity : ComponentActivity() {
                                             .padding(16.dp),
                                         shape = MaterialTheme.shapes.medium,
                                         colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                            containerColor = MaterialTheme.colorScheme.surface
                                         )
                                     ) {
                                         Column(modifier = Modifier.padding(16.dp)) {
@@ -159,7 +176,7 @@ class CocktailDetailActivity : ComponentActivity() {
                                             .padding(16.dp),
                                         shape = MaterialTheme.shapes.medium,
                                         colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                            containerColor = MaterialTheme.colorScheme.surface
                                         )
                                     ) {
                                         Column(modifier = Modifier.padding(16.dp)) {
@@ -176,7 +193,7 @@ class CocktailDetailActivity : ComponentActivity() {
                                             .padding(16.dp),
                                         shape = MaterialTheme.shapes.medium,
                                         colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                            containerColor = MaterialTheme.colorScheme.surface
                                         )
                                     ) {
                                         Column(modifier = Modifier.padding(16.dp)) {
@@ -195,7 +212,7 @@ class CocktailDetailActivity : ComponentActivity() {
                                             .padding(16.dp),
                                         shape = MaterialTheme.shapes.medium,
                                         colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                            containerColor = MaterialTheme.colorScheme.surface
                                         )
                                     ) {
                                         Column(
@@ -238,7 +255,7 @@ class CocktailDetailActivity : ComponentActivity() {
                                 IconButton(
                                     onClick = { finish() },
                                     modifier = Modifier
-                                        .padding(16.dp)
+                                        .padding(top = 26.dp, start = 16.dp)
                                         .align(Alignment.TopStart)
                                 ) {
                                     Icon(

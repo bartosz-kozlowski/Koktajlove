@@ -2,6 +2,7 @@ package com.example.cocktailapp
 
 import android.app.Application
 import android.content.Context
+import android.media.MediaPlayer
 import android.os.CountDownTimer
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.AndroidViewModel
@@ -13,6 +14,7 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedSeconds = mutableStateMapOf<String, Int>()
     private val _timeLeft = mutableStateMapOf<String, Long>()
     private val _isRunning = mutableStateMapOf<String, Boolean>()
+    private var mediaPlayer: MediaPlayer? = null
 
     private val sharedPreferences = application.getSharedPreferences("timer_prefs", Context.MODE_PRIVATE)
 
@@ -127,6 +129,7 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
             override fun onFinish() {
                 _isRunning[drinkId] = false
                 _timeLeft[drinkId] = 0L
+                playFinishSound()
                 saveTimerState(drinkId)
             }
         }
@@ -135,6 +138,14 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         _isRunning[drinkId] = true
         saveTimerState(drinkId)
     }
+
+    private fun playFinishSound() {
+        val context = getApplication<Application>().applicationContext
+        mediaPlayer?.release()
+        mediaPlayer = MediaPlayer.create(context, R.raw.timer_done)
+        mediaPlayer?.start()
+    }
+
 
     fun pauseTimer(drinkId: String) {
         timers[drinkId]?.cancel()
@@ -160,6 +171,8 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        mediaPlayer?.release()
+        mediaPlayer = null
         timers.values.forEach { it.cancel() }
     }
 }
