@@ -1,3 +1,4 @@
+import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,7 +6,13 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
     id("com.google.gms.google-services")
 }
-
+val localProperties = rootProject.file("local.properties")
+val properties = Properties().apply {
+    if (localProperties.exists()) {
+        load(localProperties.inputStream())
+    }
+}
+val geminiApiKey: String = properties.getProperty("GEMINI_API_KEY") ?: ""
 android {
     namespace = "com.example.cocktailapp"
     compileSdk = 35
@@ -16,7 +23,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -38,7 +45,9 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
+    sourceSets["main"].java.srcDirs("src/main/java")
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.0"
     }

@@ -22,49 +22,9 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         ((_selectedMinutes[drinkId] ?: 1) * 60_000L) + ((_selectedSeconds[drinkId] ?: 0) * 1000L)
     }
 
-    fun getSelectedMinutes(drinkId: String) = _selectedMinutes[drinkId] ?: 1
-    fun getSelectedSeconds(drinkId: String) = _selectedSeconds[drinkId] ?: 0
     fun getTimeLeft(drinkId: String) = _timeLeft[drinkId] ?: selectedDuration(drinkId)
     fun isRunning(drinkId: String) = _isRunning[drinkId] ?: false
 
-    /*fun loadDurationForDrink(drinkId: String) {
-        if (!_selectedMinutes.containsKey(drinkId)) {
-            _selectedMinutes[drinkId] = 1
-            _selectedSeconds[drinkId] = 0
-
-            val savedTime = sharedPreferences.getLong("${drinkId}_timeLeft", -1L)
-            val savedRunning = sharedPreferences.getBoolean("${drinkId}_isRunning", false)
-
-            if (savedTime != -1L) {
-                _timeLeft[drinkId] = savedTime
-                _isRunning[drinkId] = savedRunning
-            } else {
-                _timeLeft[drinkId] = 60_000L
-                _isRunning[drinkId] = false
-            }
-        }
-    }*/
-    /*
-    fun loadDurationForDrink(drinkId: String, preparationTime: Int) {
-        if (!_selectedMinutes.containsKey(drinkId)) {
-            val preparationTime = preparationTime * 60
-            // Ustawiamy minutnik na podstawie czasu przygotowania drinka
-            _selectedMinutes[drinkId] = preparationTime / 60 // Zamiana minut
-            _selectedSeconds[drinkId] = preparationTime % 60 // Zamiana sekund
-
-            val savedTime = sharedPreferences.getLong("${drinkId}_timeLeft", -1L)
-            val savedRunning = sharedPreferences.getBoolean("${drinkId}_isRunning", false)
-
-            if (savedTime != -1L) {
-                _timeLeft[drinkId] = savedTime
-                //_isRunning[drinkId] = savedRunning
-                _isRunning[drinkId] = false
-            } else {
-                _timeLeft[drinkId] = (preparationTime * 1000L) // Ustawiamy czas w milisekundach
-                _isRunning[drinkId] = false
-            }
-        }
-    }*/
     fun loadDurationForDrink(drinkId: String, preparationTime: Int) {
         if (!_selectedMinutes.containsKey(drinkId)) {
             val savedMinutes = sharedPreferences.getInt("${drinkId}_minutes", -1)

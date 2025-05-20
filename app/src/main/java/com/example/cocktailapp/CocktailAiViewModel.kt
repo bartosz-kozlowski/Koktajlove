@@ -2,6 +2,7 @@ package com.example.cocktailapp
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import com.example.cocktailapp.BuildConfig
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -40,7 +41,7 @@ class CocktailAiViewModel : ViewModel() {
             )
         )
 
-        geminiApi.generateContent(apiKey = "REMOVED", request = request).enqueue(object : Callback<GeminiResponse> {
+        geminiApi.generateContent(apiKey = com.example.cocktailapp.BuildConfig.GEMINI_API_KEY, request = request).enqueue(object : Callback<GeminiResponse> {
             override fun onResponse(call: Call<GeminiResponse>, response: Response<GeminiResponse>) {
                 loading.value = false
                 if (response.isSuccessful) {

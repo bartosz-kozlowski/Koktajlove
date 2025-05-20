@@ -16,6 +16,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.core.net.toUri
 import com.example.cocktailapp.ui.theme.AlcoholicColor
 import com.example.cocktailapp.ui.theme.NonAlcoholicColor
+import kotlinx.coroutines.delay
 
 
 class MainActivity : ComponentActivity() {
@@ -74,8 +76,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                AnonymousLogin()
+                //AnonymousLogin()
                 val viewModel: CocktailViewModel = viewModel()
+                //val favoritesLoaded by viewModel.favoritesLoaded.collectAsState()
                 CocktailAppRoot(viewModel = viewModel)
             }
         }
@@ -92,13 +95,12 @@ fun isTablet(): Boolean {
 @Composable
 fun AnonymousLogin() {
     val context = LocalContext.current
-
     LaunchedEffect(Unit) {
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) {
             auth.signInAnonymously()
                 .addOnSuccessListener {
-                    //Toast.makeText(context, "Zalogowano anonimowo", Toast.LENGTH_SHORT).show()
+                    //Toast.makeText(context, "Zalogowano anonimowo", Toast.LENGTH_LONG).show()
                 }
                 .addOnFailureListener { exception ->
                     //Log.e("FirebaseAuth", "Błąd logowania anonimowego", exception)
@@ -160,12 +162,10 @@ fun CocktailTabbedScreen(
     val tabs = listOf("Wszystkie", "Z Procentem", "Na Trzeźwo", "Ulubione")
 
     LaunchedEffect(pagerState, isTablet) {
-        //if (!isTablet) {
-            snapshotFlow { pagerState.currentPage }
-                .collect { page ->
-                    selectedTabIndex = page
-                }
-        //}
+        snapshotFlow { pagerState.currentPage }
+            .collect { page ->
+                selectedTabIndex = page
+            }
     }
 
     ModalNavigationDrawer(
@@ -216,18 +216,14 @@ fun CocktailTabbedScreen(
                     onClick = {
                         scope.launch {
                             drawerState.close()
-                            Toast.makeText(
-                                context,
-                                "Twórca: Bartosz Kozłowski\nKoktajlove © 2025",
-                                Toast.LENGTH_LONG
-                            ).show()
                         }
+                        val intent = Intent(context, AboutActivity::class.java)
+                        context.startActivity(intent)
                     }
                 )
             }
         }
     ) {
-        // <<< Klikający BOX na całość
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -332,13 +328,6 @@ fun CocktailTabbedScreen(
                                 it.name.contains(searchQuery, ignoreCase = true) ||
                                         it.preparation.contains(searchQuery, ignoreCase = true)
                             }
-                            val cocktails = when (selectedTabIndex) {
-                                0 -> filteredCocktails
-                                1 -> filteredCocktails.filter { it.isAlcoholic }
-                                2 -> filteredCocktails.filter { !it.isAlcoholic }
-                                3 -> filteredCocktails.filter { favorites.contains(it.id) }
-                                else -> emptyList()
-                            }
 
                             TabRow(
                                 selectedTabIndex = selectedTabIndex,
@@ -352,9 +341,7 @@ fun CocktailTabbedScreen(
                                         onClick = {
                                             focusManager.clearFocus()
                                             selectedTabIndex = index
-                                            //if (!isTablet) {
-                                                scope.launch { pagerState.scrollToPage(index) }
-                                           // }
+                                            scope.launch { pagerState.scrollToPage(index) }
                                         },
                                         selectedContentColor = MaterialTheme.colorScheme.onPrimary, // Kolor dla aktywnej zakładki
                                         unselectedContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), // Kolor dla nieaktywnej zakładki
@@ -380,6 +367,7 @@ fun CocktailTabbedScreen(
                                     items(cocktails) { cocktail ->
                                         val favorites by viewModel.favorites.collectAsState()
                                         val isFavorite = favorites.contains(cocktail.id)
+                                        val favoritesLoaded by viewModel.favoritesLoaded.collectAsState()
                                         Card(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -414,20 +402,38 @@ fun CocktailTabbedScreen(
                                                     )
                                                     IconButton(
                                                         onClick = {
-                                                            viewModel.toggleFavorite(cocktail.copy(isFavorite = !isFavorite))
-                                                        }
+                                                            if (favoritesLoaded) {
+                                                                viewModel.toggleFavorite(cocktail.copy(isFavorite = !isFavorite))
+                                                            }
+                                                        },
+                                                        enabled = favoritesLoaded,
+                                                        modifier = Modifier
+                                                            .size(52.dp)
                                                     ) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        BadgedBox(
+                                                            badge = {
+                                                                if (cocktail.likeCount > 0) {
+                                                                    Badge(
+                                                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                                                        modifier = Modifier
+                                                                            //.offset(x = 6.dp, y = (-2).dp)
+                                                                            //.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                                    ) {
+                                                                        Text(
+                                                                            text = if (cocktail.likeCount > 99) "99+" else "${cocktail.likeCount}",
+                                                                            color = MaterialTheme.colorScheme.onSecondary,
+                                                                            style = MaterialTheme.typography.labelMedium,
+                                                                            textAlign = TextAlign.Center,
+                                                                            maxLines = 1
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                        ) {
                                                             Icon(
                                                                 imageVector = Icons.Default.Favorite,
                                                                 contentDescription = "Ulubione",
-                                                                tint = if (isFavorite) Color.Red else Color.Gray
-                                                            )
-                                                            Spacer(modifier = Modifier.width(4.dp))
-                                                            Text(
-                                                                text = "${cocktail.likeCount}",
-                                                                color = Color.White,
-                                                                style = MaterialTheme.typography.bodyMedium
+                                                                tint = if (isFavorite) Color.Red else Color.Gray,
                                                             )
                                                         }
                                                     }
@@ -526,6 +532,7 @@ fun CocktailTabbedScreen(
                                 items(cocktails) { cocktail ->
                                     val favorites by viewModel.favorites.collectAsState()
                                     val isFavorite = favorites.contains(cocktail.id)
+                                    val favoritesLoaded by viewModel.favoritesLoaded.collectAsState()
                                     Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -562,24 +569,38 @@ fun CocktailTabbedScreen(
                                                 )
                                                 IconButton(
                                                     onClick = {
-                                                        viewModel.toggleFavorite(
-                                                            cocktail.copy(isFavorite = !isFavorite)
-                                                        )
-                                                    }
+                                                        if (favoritesLoaded) {
+                                                            viewModel.toggleFavorite(cocktail.copy(isFavorite = !isFavorite))
+                                                        }
+                                                    },
+                                                    enabled = favoritesLoaded,
+                                                    modifier = Modifier
+                                                        //.padding(end = 4.dp)
+                                                        .size(52.dp)
                                                 ) {
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically
+                                                    BadgedBox(
+                                                        badge = {
+                                                            if (cocktail.likeCount > 0) {
+                                                                Badge(
+                                                                    containerColor = MaterialTheme.colorScheme.secondary,
+                                                                    modifier = Modifier
+                                                                        //.offset(x = 4.dp, y = (-2).dp)
+                                                                ) {
+                                                                    Text(
+                                                                        text = if (cocktail.likeCount > 99) "99+" else "${cocktail.likeCount}",
+                                                                        color = MaterialTheme.colorScheme.onSecondary,
+                                                                        style = MaterialTheme.typography.labelMedium,
+                                                                        textAlign = TextAlign.Center,
+                                                                        maxLines = 1
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
                                                     ) {
                                                         Icon(
                                                             imageVector = Icons.Default.Favorite,
                                                             contentDescription = "Ulubione",
                                                             tint = if (isFavorite) Color.Red else Color.Gray
-                                                        )
-                                                        Spacer(modifier = Modifier.width(4.dp))
-                                                        Text(
-                                                            text = "${cocktail.likeCount}",
-                                                            color = Color.White,
-                                                            style = MaterialTheme.typography.bodyMedium
                                                         )
                                                     }
                                                 }
@@ -617,10 +638,14 @@ fun TabletCocktailDetailScreen(
     }
 
     //val scrollState = rememberScrollState()
-    val scrollState = rememberScrollState()
+    val scrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
+    var lastScrolledId by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(cocktail.id) {
-        scrollState.scrollTo(0)
+        if (lastScrolledId != cocktail.id) {
+            scrollState.scrollTo(0)
+            lastScrolledId = cocktail.id
+        }
     }
 
     val expandedHeight = 240.dp

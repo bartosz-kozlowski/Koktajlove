@@ -23,12 +23,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,6 +92,9 @@ fun AiCocktailScreen(viewModel: CocktailAiViewModel = viewModel()) {
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    val connectivityObserver = remember { ConnectivityObserver(context) }
+    val isConnected by connectivityObserver.connectionStatus.collectAsState(initial = true)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -110,7 +115,7 @@ fun AiCocktailScreen(viewModel: CocktailAiViewModel = viewModel()) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Koktajlove🍹") },
+                    title = { Text("Barman AI🍹") },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -156,14 +161,25 @@ fun AiCocktailScreen(viewModel: CocktailAiViewModel = viewModel()) {
                     label = { Text("Np. wódka, limonka, sok jabłkowy") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
-                    maxLines = 3
+                    maxLines = 3,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onBackground
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-
+                if (!isConnected) {
+                    Text(
+                        text = "⚠️ Brak połączenia z internetem",
+                        color = Color.Red,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                }
                 Button(
                     onClick = { viewModel.generateCocktail(input) },
-                    enabled = input.isNotBlank() && !viewModel.loading.value,
+                    enabled = input.isNotBlank() && !viewModel.loading.value && isConnected,
                     modifier = Modifier.align(Alignment.End)
                 ) {
                     Text("Generuj koktajl 🍸")

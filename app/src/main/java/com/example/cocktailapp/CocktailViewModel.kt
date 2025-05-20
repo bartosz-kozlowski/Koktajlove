@@ -1,10 +1,13 @@
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.cocktailapp.Cocktail
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class CocktailViewModel : ViewModel() {
 
@@ -20,13 +23,19 @@ class CocktailViewModel : ViewModel() {
     private val _selectedCocktail = MutableStateFlow<Cocktail?>(null)
     val selectedCocktail: StateFlow<Cocktail?> = _selectedCocktail
 
-    fun selectCocktail(cocktail: Cocktail) {
-        _selectedCocktail.value = cocktail
-    }
+    private val _favoritesLoaded = MutableStateFlow(false)
+    val favoritesLoaded: StateFlow<Boolean> = _favoritesLoaded
+
+    private val _showLoading = MutableStateFlow(true)
+    //val showLoading: StateFlow<Boolean> = _showLoading
+
+    val splashStartTime = System.currentTimeMillis()
+
 
     init {
+        waitForLoginAndListenToFavorites()
         loadCocktails()
-        listenToFavorites()
+        //listenToFavorites()
     }
 
     private fun loadCocktails() {
@@ -73,6 +82,17 @@ class CocktailViewModel : ViewModel() {
                 }
             }
     }
+
+    fun waitForLoginAndListenToFavorites() {
+        FirebaseAuth.getInstance().addAuthStateListener { auth ->
+            val user = auth.currentUser
+            if (user != null) {
+                listenToFavorites()
+            }
+        }
+    }
+
+
     private fun listenToFavorites() {
         val userId = auth.currentUser?.uid ?: return
 
@@ -85,20 +105,17 @@ class CocktailViewModel : ViewModel() {
                 if (snapshot != null) {
                     val favoriteIds = snapshot.documents.map { it.id }.toSet()
                     _favorites.value = favoriteIds
+                    _favoritesLoaded.value = true
+
+                    viewModelScope.launch {
+                        delay(500)
+                        _showLoading.value = false
+                    }
+
                 }
             }
     }
-    /*
-    fun toggleFavorite(cocktail: Cocktail) {
-        val userId = auth.currentUser?.uid ?: return
-        val favRef = db.collection("users").document(userId).collection("favorites").document(cocktail.id)
 
-        if (_favorites.value.contains(cocktail.id)) {
-            favRef.delete()
-        } else {
-            favRef.set(hashMapOf("timestamp" to System.currentTimeMillis()))
-        }
-    }*/
     fun toggleFavorite(cocktail: Cocktail) {
         val userId = auth.currentUser?.uid ?: return
         val favRef = db.collection("users").document(userId)
@@ -120,11 +137,4 @@ class CocktailViewModel : ViewModel() {
         }
     }
 
-    fun clearSelectedCocktail() {
-        _selectedCocktail.value = null
-    }
-
-    fun isFavorite(cocktail: Cocktail): Boolean {
-        return _favorites.value.contains(cocktail.id)
-    }
 }

@@ -1,5 +1,6 @@
 package com.example.cocktailapp
 
+import CocktailViewModel
 import android.content.Context
 import android.content.Intent
 import android.hardware.Sensor
@@ -9,11 +10,13 @@ import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -33,6 +37,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.cocktailapp.ui.theme.CocktailAppTheme
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.cos
@@ -44,11 +49,16 @@ class SplashActivity : ComponentActivity(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private var sensorX by mutableStateOf(0f)
     private var sensorY by mutableStateOf(0f)
+    private val viewModel: CocktailViewModel by viewModels()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val auth = FirebaseAuth.getInstance()
+        if (auth.currentUser == null) {
+            auth.signInAnonymously()
+        }
 
         setContent {
             CocktailAppTheme {
@@ -59,27 +69,70 @@ class SplashActivity : ComponentActivity(), SensorEventListener {
                 val rotation = remember { Animatable(0f) }
                 val bgColor = remember { Animatable(Color(0xFFFFA500)) }
                 val scope = rememberCoroutineScope()
+                var stopAnimations by remember { mutableStateOf(false) }
 
-                // Start animations
+                val favoritesLoaded by viewModel.favoritesLoaded.collectAsState()
+
+                val connectivityObserver = remember { ConnectivityObserver(context) }
+                val isConnected by connectivityObserver.connectionStatus.collectAsState(initial = true)
+
+                var splashPassed by remember { mutableStateOf(false) }
+
+                LaunchedEffect(Unit) {
+                    val elapsed = System.currentTimeMillis() - viewModel.splashStartTime
+                    if (elapsed < 3000) {
+                        delay(3000 - elapsed)
+                    }
+                    splashPassed = true
+                }
+
+                LaunchedEffect(Unit) {
+                    val elapsed = System.currentTimeMillis() - viewModel.splashStartTime
+                    val remaining = 10_000 - elapsed
+                    if (remaining > 0) {
+                        delay(remaining)
+                    }
+                    if (!favoritesLoaded) {
+                        Toast.makeText(context, "Nie udało się załadować danych.\nSprawdź połączenie z internetem.", Toast.LENGTH_LONG).show()
+                        finishAffinity()
+                    }
+                }
+
+
+                LaunchedEffect(isConnected) {
+                    if (!isConnected) {
+                        Toast.makeText(context, "Brak połączenia z internetem", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
                 LaunchedEffect(Unit) {
                     scope.launch {
-                        scale.animateTo(1f, animationSpec = tween(1000))
+                        //scale.animateTo(1f, animationSpec = tween(1000))
+                        while (!stopAnimations) {
+                            scale.animateTo(1.1f, animationSpec = tween(1000))
+                            scale.animateTo(1.0f, animationSpec = tween(1000))
+                        }
                     }
                     scope.launch {
-                        rotation.animateTo(360f, animationSpec = tween(1500))
+                        //rotation.animateTo(360f, animationSpec = tween(1500))
+                        while (!stopAnimations) {
+                            rotation.animateTo(360f, tween(1000))
+                            rotation.snapTo(0f)
+                        }
                     }
                     scope.launch {
-                        while (true) {
-                            val nextColor = Color(Random.nextInt(256), Random.nextInt(256), Random.nextInt(256))
-                            bgColor.animateTo(nextColor, animationSpec = tween(2000))
+                        while (!stopAnimations) {
+                            //val nextColor = Color(Random.nextInt(256), Random.nextInt(256), Random.nextInt(256))
+                            val nextColor = Color.hsv(
+                                hue = Random.nextFloat() * 360f,
+                                saturation = 0.6f + Random.nextFloat() * 0.4f,
+                                value = 0.8f + Random.nextFloat() * 0.2f
+                            )
+                            bgColor.animateTo(nextColor, animationSpec = tween(1000))
                         }
                     }
                 }
 
-                /*LaunchedEffect(sensorX, sensorY) {
-                    offsetX = sensorX * 8  // Żyroskop Y wpływa na przesunięcie X
-                    offsetY = sensorY * 8  // Żyroskop X wpływa na przesunięcie Y
-                }*/
 
                 val time = remember { mutableStateOf(0f) }
                 LaunchedEffect(Unit) {
@@ -114,12 +167,19 @@ class SplashActivity : ComponentActivity(), SensorEventListener {
                     )
                 }
 
-                LaunchedEffect(Unit) {
-                    Handler(Looper.getMainLooper()).postDelayed({
+                LaunchedEffect(favoritesLoaded, splashPassed) {
+                    if (favoritesLoaded && splashPassed) {
+                        stopAnimations = true // zatrzymaj pętle
+                        // wygaszenie animacji:
+                        //rotation.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
+                        rotation.snapTo(0f)
+                        scale.animateTo(1.35f, tween(300))
+                        delay(100)
                         context.startActivity(Intent(context, MainActivity::class.java))
-                        finish()
-                    }, 3000)
+                        (context as? ComponentActivity)?.finish()
+                    }
                 }
+
             }
         }
     }

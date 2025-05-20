@@ -35,7 +35,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.example.cocktailapp.ui.theme.AlcoholicColor
 import com.example.cocktailapp.ui.theme.NonAlcoholicColor
 import androidx.core.net.toUri
-
+import androidx.compose.foundation.ScrollState
+import androidx.compose.runtime.saveable.rememberSaveable
 fun Dp.toPx(density: Float): Float = this.value * density
 fun androidx.compose.ui.unit.Dp.toPx(): Float = this.value * Resources.getSystem().displayMetrics.density
 
@@ -55,7 +56,8 @@ class CocktailDetailActivity : ComponentActivity() {
 
         setContent {
             CocktailAppTheme {
-                val scrollState = rememberScrollState()
+                //val scrollState = rememberScrollState()
+                val scrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
                 val expandedHeight = 240.dp
                 val collapsedHeight = 86.dp
                 val collapseRangePx = expandedHeight.toPx() - collapsedHeight.toPx()

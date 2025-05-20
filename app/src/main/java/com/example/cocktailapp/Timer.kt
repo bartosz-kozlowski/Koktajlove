@@ -134,9 +134,9 @@ fun TimerScreen(
                     timerViewModel.resetTimer(drinkId)
                 }
             )
-            //Spacer(Modifier.width(16.dp)) // <-- dodaj odstęp
+            //Spacer(Modifier.width(16.dp))
             TimerButton(
-                icon = Icons.Default.Refresh, // <-- użyj ikony odświeżania
+                icon = Icons.Default.Refresh,
                 contentDescription = "Przywróć czas przygotowania",
                 enabled = true,
                 onClick = {
